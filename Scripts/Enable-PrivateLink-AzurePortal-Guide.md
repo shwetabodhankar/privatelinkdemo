@@ -400,6 +400,73 @@ Web App (10.0.1.x in VNet)
 
 ---
 
+## Understanding Current Key Vault Access (Before Private Link)
+
+Before configuring Private Link, let's understand how your App Service currently accesses Key Vault.
+
+### Current Configuration
+
+Navigate to your Key Vault → **Networking** → **Firewalls and virtual networks** tab.
+
+You'll see:
+- ✅ **"Disable public access"** selected
+- ✅ **"Allow trusted Microsoft services to bypass this firewall"** checked (Exception section)
+
+### How App Service Accesses Key Vault Today
+
+Even though public access is disabled, your App Service can still access Key Vault because of the **"Trusted Microsoft Services"** exception:
+
+```
+App Service (myapp-web-5233)
+    ↓ Uses Managed Identity
+    ↓ Recognized as "Trusted Microsoft Service"
+    ↓ Bypasses firewall via exception
+    → Key Vault ✅ Access Allowed
+```
+
+**Who counts as "Trusted Microsoft Services"?**
+- App Service (with managed identity)
+- Azure Functions (with managed identity)
+- Azure DevOps
+- Azure Backup
+- Other Azure first-party services
+
+### Current State vs. After Private Link
+
+| Aspect | Current (Public + Exception) | After Private Link |
+|--------|------------------------------|-------------------|
+| **App Service Access** | ✅ Allowed (exception) | ✅ Allowed (private network) |
+| **Other Azure Services** | ✅ Can access (exception) | ❌ Blocked (unless in VNet) |
+| **Internet/Hackers** | ❌ Blocked | ❌ Blocked |
+| **Traffic Path** | ⚠️ Public internet | ✅ Private Azure backbone |
+| **DNS Resolution** | Public IP | Private IP (10.0.2.x) |
+| **Security Level** | Good | Excellent |
+
+### The Key Difference
+
+**Current Setup:**
+```
+App Service → Public Internet → Firewall Exception → Key Vault
+              (Allowed because "trusted service")
+```
+
+**After Private Link:**
+```
+App Service → VNet Integration → Private Network → Private Endpoint → Key Vault
+              (No internet involved at all)
+```
+
+### What We'll Change
+
+After completing this guide, you'll:
+1. ✅ Keep **"Disable public access"** (or use "Selected networks")
+2. ❌ **Uncheck** "Allow trusted Microsoft services" for maximum security
+3. ✅ Force ALL access through Private Endpoint only
+
+**Result:** Only resources in your VNet can reach Key Vault - nothing else! 🔒
+
+---
+
 ## Phase 2: Create Private Endpoint for Key Vault
 
 ### Step 4: Navigate to Key Vault
@@ -470,22 +537,26 @@ Current settings will show:
 
 **Choose Your Security Model:**
 
-#### Option A - Strict (Block All Public Access) 🔒
+#### Option A - Maximum Security (Private Link Only) 🔒
 
-**Use when**: Production environment with no portal access needed
+**Use when**: Production environment, forcing all traffic through Private Link
 
 - **Public network access**: Select **"Disabled"**
 
-⚠️ **Warning**: 
-- You'll lose Azure Portal access to secrets
-- Only VNet-connected resources can access
-- Good for production security
+**Exception Settings:**
+- ❌ **Uncheck** "Allow trusted Microsoft services to bypass this firewall"
+
+✅ **Result**: 
+- Only VNet-connected resources can access (via Private Endpoint)
+- No public access at all - not even for Azure services
+- Maximum security posture
+- ⚠️ You'll lose Azure Portal access to secrets (must use VNet-connected VM or bastion)
 
 ---
 
-#### Option B - Hybrid (Recommended for Testing) 🔐
+#### Option B - Hybrid Access (Recommended for Testing) 🔐
 
-**Use when**: Testing setup or need portal access
+**Use when**: Testing setup, need portal access, or have non-VNet Azure services
 
 - **Public network access**: Select **"Enabled from selected virtual networks and IP addresses"**
 
@@ -493,14 +564,27 @@ Current settings will show:
 - ✅ Check **"Add your client IPv4 address"** (adds your current IP automatically)
 - Or manually add your IP in **"Address range"** field
 
-**Exceptions:**
+**Exception Settings:**
 - ✅ Check **"Allow trusted Microsoft services to bypass this firewall"**
 
-> ℹ️ **Why**: This allows App Service and other Azure services to access even when public access is restricted
+> ℹ️ **Why**: This allows Azure Portal access and other Azure services to access even when public access is restricted
+
+> 💡 **Note**: Even with this exception enabled, Private Link traffic will flow through the Private Endpoint (preferred route) rather than the public endpoint.
 
 **Apply Settings:**
 - Click **"Apply"** at the bottom
 - ⏱️ Wait ~30 seconds for changes to propagate
+
+---
+
+#### Understanding the Options
+
+| Option | Private Endpoint Access | Public Portal Access | Azure Services | Security Level |
+|--------|------------------------|---------------------|----------------|----------------|
+| **Option A** | ✅ Yes (via VNet) | ❌ No | ❌ No | Excellent |
+| **Option B** | ✅ Yes (preferred) | ✅ Yes (your IP) | ✅ Yes (exception) | Good |
+
+**Recommendation**: Start with **Option B** for testing, switch to **Option A** for production.
 
 ---
 
