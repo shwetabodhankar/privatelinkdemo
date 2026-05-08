@@ -1,0 +1,168 @@
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "Sales Dashboard";
+}
+
+<div class="mb-4">
+    <h1 class="display-5"><i class="bi bi-bar-chart-fill"></i> Sales Dashboard</h1>
+    <p class="lead">Real-time sales data from Azure SQL Database</p>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-success">
+            <div class="card-body">
+                <h5 class="card-title text-success">
+                    <i class="bi bi-currency-dollar"></i> Total Revenue
+                </h5>
+                <h2 class="display-4">$@Model.TotalRevenue.ToString("N2")</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm border-info">
+            <div class="card-body">
+                <h5 class="card-title text-info">
+                    <i class="bi bi-box-seam"></i> Total Units Sold
+                </h5>
+                <h2 class="display-4">@Model.TotalUnitsSold.ToString("N0")</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Revenue by Category -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Revenue by Category</h5>
+            </div>
+            <div class="card-body">
+                @if (Model.RevenueByCategory.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th class="text-end">Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var category in Model.RevenueByCategory.OrderByDescending(c => c.Value))
+                                {
+                                    <tr>
+                                        <td><strong>@category.Key</strong></td>
+                                        <td class="text-end">$@category.Value.ToString("N2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted">No data available</p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Sales by Region -->
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-globe"></i> Sales by Region</h5>
+            </div>
+            <div class="card-body">
+                @if (Model.SalesByRegion.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Region</th>
+                                    <th class="text-end">Units Sold</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var region in Model.SalesByRegion.OrderByDescending(r => r.Value))
+                                {
+                                    <tr>
+                                        <td><strong>@region.Key</strong></td>
+                                        <td class="text-end">@region.Value.ToString("N0")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted">No data available</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Sales -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Sales</h5>
+            </div>
+            <div class="card-body">
+                @if (Model.RecentSales.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Category</th>
+                                    <th>Region</th>
+                                    <th class="text-end">Unit Price</th>
+                                    <th class="text-end">Units Sold</th>
+                                    <th class="text-end">Total Revenue</th>
+                                    <th>Sale Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var sale in Model.RecentSales)
+                                {
+                                    <tr>
+                                        <td><strong>@sale.ProductName</strong></td>
+                                        <td><span class="badge bg-secondary">@sale.Category</span></td>
+                                        <td><span class="badge bg-info">@sale.Region</span></td>
+                                        <td class="text-end">$@sale.Revenue.ToString("N2")</td>
+                                        <td class="text-end">@sale.UnitsSold</td>
+                                        <td class="text-end"><strong>$@((sale.Revenue * sale.UnitsSold).ToString("N2"))</strong></td>
+                                        <td>@sale.SaleDate.ToString("MMM dd, yyyy")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-warning" role="alert">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        No sales data available. Please ensure your database is configured and populated.
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <div class="alert alert-info" role="alert">
+        <i class="bi bi-info-circle"></i>
+        <strong>Data Source:</strong> This dashboard displays real-time data from Azure SQL Database.
+    </div>
+</div>

@@ -1,0 +1,10 @@
+bin/
+obj/
+publish/
+webapp-logs*/
+*.user
+*.suo
+.vs/
+appsettings.Development.json
+*.log
+*.zip
